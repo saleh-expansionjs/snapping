@@ -99,6 +99,7 @@ const SnapToRectangles = () => {
             onDragMove={handleDragMove}
             fill={'black'}
             closed
+            rotation={20}
           />
         ))}
       </Layer>
