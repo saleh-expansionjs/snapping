@@ -1,5 +1,5 @@
 import React from "react";
-import MouseDetection from './MouseDetection'
+import MouseDetection from './SatImplimentation2'
 
 const App = () => {
   return <MouseDetection />
