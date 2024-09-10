@@ -26,6 +26,7 @@ const App = () => {
   }
 
   const threshold = 15; // Snapping threshold in pixels
+  const proximityThreshold = 200; // Only check for rectangles within this distance
 
   const createPolygon = (x, y, width, height, rotation) => {
     const points = [
@@ -48,9 +49,24 @@ const App = () => {
     return Math.sqrt(dx * dx + dy * dy);
   };
 
-  const snapToClosest = (movingRect, staticRects) => {
-    let snappedRect = { ...movingRect };
+  const calculateCenter = (rect) => ({
+    x: rect.x,
+    y: rect.y,
+  });
 
+  const getClosestRects = (movingRect, staticRects) => {
+    const movingCenter = calculateCenter(movingRect);
+    return staticRects.filter((staticRect) => {
+      const staticCenter = calculateCenter(staticRect);
+      const distance = calculateDistance(movingCenter, staticCenter);
+      return distance <= proximityThreshold;
+    });
+  };
+
+  const snapToClosest = (movingRect, staticRects, mousePos) => {
+    let snappedRect = { ...movingRect };
+    let minDistance = Infinity;
+  
     const movingPolygon = createPolygon(
       movingRect.x,
       movingRect.y,
@@ -58,8 +74,10 @@ const App = () => {
       movingRect.height,
       movingRect.rotation
     );
-
-    staticRects.forEach((staticRect) => {
+  
+    const closestRects = getClosestRects(movingRect, staticRects);
+  
+    closestRects.forEach((staticRect) => {
       const staticPolygon = createPolygon(
         staticRect.x,
         staticRect.y,
@@ -67,63 +85,58 @@ const App = () => {
         staticRect.height,
         staticRect.rotation
       );
-
+  
       const response = new SAT.Response();
       const collided = SAT.testPolygonPolygon(
         movingPolygon,
         staticPolygon,
         response
       );
-
+  
+      const staticCenter = calculateCenter(staticRect);
+      const mouseDistance = calculateDistance(mousePos, staticCenter);
+  
       if (collided) {
-        // Snap based on overlap if they collide
+        // Prevent overlap if they collide
         snappedRect.x -= response.overlapV.x;
         snappedRect.y -= response.overlapV.y;
-      } else {
-        // Check for distance between all corners
-        for (let i = 0; i < movingPolygon.points.length; i++) {
-          const movingPoint = movingPolygon.points[i]
-            .clone()
-            .rotate(movingPolygon.angle)
-            .add(movingPolygon.pos);
-          for (let j = 0; j < staticPolygon.points.length; j++) {
-            const staticPoint = staticPolygon.points[j]
-              .clone()
-              .rotate(staticPolygon.angle)
-              .add(staticPolygon.pos);
-            const distance = calculateDistance(movingPoint, staticPoint);
-
-            // Snap if within the threshold
-            if (distance <= threshold) {
-              snappedRect.x += staticPoint.x - movingPoint.x;
-              snappedRect.y += staticPoint.y - movingPoint.y;
-              return; // Early exit after snapping
-            }
-          }
+      } else if (mouseDistance < minDistance) {
+        minDistance = mouseDistance;
+  
+        const dx = staticCenter.x - movingRect.x;
+        const dy = staticCenter.y - movingRect.y;
+  
+        if (Math.abs(dx) < Math.abs(dy) && Math.abs(dx) <= threshold) {
+          // Prioritize snapping along x-axis
+          snappedRect.x += dx;
+        } else if (Math.abs(dy) <= threshold) {
+          // Prioritize snapping along y-axis
+          snappedRect.y += dy;
         }
       }
     });
-
+  
     return snappedRect;
   };
+  
 
   const handleDragMove = (e) => {
     const stage = stageRef.current;
     if (!stage) return;
-
+  
     const movingRectNode = e.target;
     const mousePos = stage.getPointerPosition();
-
+  
     if (!mousePos) return;
-
+  
     const movingRect = {
-      x: mousePos.x,
-      y: mousePos.y,
+      x: movingRectNode.x(),
+      y: movingRectNode.y(),
       width: movingRectNode.width(),
       height: movingRectNode.height(),
       rotation: movingRectNode.rotation(),
     };
-
+  
     // Get static rectangles from the stage
     const staticRects = stage.find(".static-rect").reduce((acc, rectNode) => {
       const newObj = {
@@ -138,15 +151,17 @@ const App = () => {
       }
       return acc;
     }, []);
-
-    const snappedRect = snapToClosest(movingRect, staticRects);
+  
+    // Snap to the closest rects
+    const snappedRect = snapToClosest(movingRect, staticRects, mousePos);
     movingRectNode.position({
       x: snappedRect.x,
       y: snappedRect.y,
     });
-
+  
     movingRectNode.getLayer().batchDraw();
   };
+  
 
   return (
     <Stage width={window.innerWidth} height={window.innerHeight} ref={stageRef}>
