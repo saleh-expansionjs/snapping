@@ -16,6 +16,12 @@ const App = () => {
     setIsDrawing(true);
   };
 
+  const handleMouseUp = () => {
+    setIsDrawing(false);
+    setStartPoint(false);
+    setRectDims({ width: 0, height: 0 });
+  };
+
   const handleMouseMove = (e) => {
     if (!isDrawing || !startPoint) return;
 
@@ -35,11 +41,7 @@ const App = () => {
     });
   };
 
-  const handleMouseUp = () => {
-    setIsDrawing(false);
-    setStartPoint(false);
-    setRectDims({ width: 0, height: 0 });
-  };
+  
 
   // Function to generate small rectangles
   const generateSmallRects = (width, height) => {
