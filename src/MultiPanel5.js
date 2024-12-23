@@ -1,14 +1,11 @@
 import React, { useState } from "react";
-import { Stage, Layer, Rect, Group } from "react-konva";
+import { Stage, Layer, Rect, Group, Line } from "react-konva";
 
 const App = () => {
   const [angle, setAngle] = useState(45); // Default angle in degrees
   const [isDrawing, setIsDrawing] = useState(false);
   const [startPoint, setStartPoint] = useState(null); // Fixed starting point
   const [rectDims, setRectDims] = useState({ width: 0, height: 0 }); // Rectangle dimensions
-
-  // Convert angle to radians
-  const angleInRadians = (angle * Math.PI) / 180;
 
   const handleMouseDown = (e) => {
     const position = e.target.getStage().getRelativePointerPosition();
@@ -19,68 +16,74 @@ const App = () => {
   const handleMouseUp = () => {
     setIsDrawing(false);
     setStartPoint(undefined);
-		setRectDims({ width: 0, height: 0, x: 0, y: 0 });
+    setRectDims({ width: 0, height: 0, x: 0, y: 0 });
   };
 
   const handleMouseMove = (e) => {
     if (!isDrawing || !startPoint) return;
-    
+
     const stage = e.target.getStage();
-		const position = stage.getRelativePointerPosition();
+    const position = stage.getRelativePointerPosition();
 
     if (!position || !startPoint) return;
 
     const dx = position.x - startPoint.x;
     const dy = position.y - startPoint.y;
 
-    const angleDegrees = angle;
-		const angleRadians = (angleDegrees * Math.PI) / 180;
+    const angleRadians = (angle * Math.PI) / 180;
 
     const projectedWidth = dx * Math.cos(angleRadians) + dy * Math.sin(angleRadians);
-		const projectedHeight = -dx * Math.sin(angleRadians) + dy * Math.cos(angleRadians);
+    const projectedHeight = -dx * Math.sin(angleRadians) + dy * Math.cos(angleRadians);
 
-		const adjustedX = dx < 0 ? startPoint.x + projectedWidth : startPoint.x;
-		const adjustedY = dy < 0 ? startPoint.y + projectedHeight : startPoint.y;
+    const adjustedX = dx < 0 ? startPoint.x + projectedWidth : startPoint.x;
+    const adjustedY = dy < 0 ? startPoint.y + projectedHeight : startPoint.y;
 
     setRectDims({
-			width: projectedWidth,
-			height: projectedHeight,
-			x: adjustedX,
-			y: adjustedY,
-		});
+      width: projectedWidth,
+      height: projectedHeight,
+      x: adjustedX,
+      y: adjustedY,
+    });
   };
 
-  
+  // Function to generate small rectangles as lines
+  const generateSmallLines = () => {
+    const smallLines = [];
+    const smallWidth = 25;
+    const smallHeight = 20;
 
-  // Function to generate small rectangles
-  const generateSmallRects = () => {
-		const smallRects = [];
-		const smallWidth = 25;
-		const smallHeight = 20;
+    // Calculate the number of small rectangles fitting in both directions
+    const cols = Math.floor(Math.abs(rectDims?.width) / smallWidth);
+    const rows = Math.floor(Math.abs(rectDims?.height) / smallHeight);
 
-		// Calculate the number of small rectangles fitting in both directions
-		const cols = Math.floor(Math.abs(rectDims?.width) / smallWidth);
-		const rows = Math.floor(Math.abs(rectDims?.height) / smallHeight);
+    const rowVector = Math.abs(rectDims.width) / rectDims.width;
+    const colVector = Math.abs(rectDims.height) / rectDims.height;
 
-		const rowVector = Math.abs(rectDims.width) / rectDims.width;
-		const coVector = Math.abs(rectDims.height) / rectDims.height;
+    const rowConstant = rowVector > 0 ? 0 : 1;
+    const colConstant = colVector > 0 ? 0 : 1;
 
-		const rowConstant = rowVector > 0 ? 0 : 1;
-		const colConstant= coVector > 0 ? 0 : 1;
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        const x = (col + rowConstant) * smallWidth * rowVector;
+        const y = (row + colConstant) * smallHeight * colVector;
 
-		for (let row = 0; row < rows; row++) {
-			for (let col = 0; col < cols; col++) {
-				smallRects.push({
-					x: (col + rowConstant) * smallWidth * rowVector,
-					y: (row + colConstant) * smallHeight * coVector
-				});
-			}
-		}
+        // Calculate corner points for the small rectangle
+        const points = [
+          x, y, // Top-left
+          x + smallWidth, y, // Top-right
+          x + smallWidth, y + smallHeight, // Bottom-right
+          x, y + smallHeight, // Bottom-left
+          x, y, // Close the rectangle
+        ];
 
-		return smallRects;
+        smallLines.push(points);
+      }
+    }
+
+    return smallLines;
   };
 
-  const smallRects = generateSmallRects();
+  const smallLines = generateSmallLines();
 
   return (
     <div>
@@ -113,17 +116,15 @@ const App = () => {
                 stroke="black"
                 strokeWidth={1}
               />
-              {/* Small Rectangles */}
-              {smallRects.map((pos, index) => (
-                <Rect
+              {/* Small Rectangles as Lines */}
+              {smallLines.map((points, index) => (
+                <Line
                   key={index}
-                  x={pos.x} // Adjust for offset
-                  y={pos.y} // Adjust for offset
-                  width={25}
-                  height={20}
-                  fill="rgba(255, 0, 0, 0.5)"
+                  points={points}
                   stroke="black"
                   strokeWidth={0.5}
+                  fill="rgba(255, 0, 0, 0.5)"
+                  closed
                 />
               ))}
             </Group>
