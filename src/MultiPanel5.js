@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { Stage, Layer, Rect, Group, Line } from "react-konva";
+import * as SAT from "sat";
+import prebuildLineRects from './smallRect';
 
 const App = () => {
   const [angle, setAngle] = useState(45);
@@ -101,10 +103,35 @@ const App = () => {
           transformedPoints[3].x,
           transformedPoints[3].y,
           transformedPoints[0].x,
-          transformedPoints[0].y, 
+          transformedPoints[0].y,
         ];
 
-        smallRectsAsLines.push(flatPoints);
+        // Convert flat points to SAT.Polygon
+        const smallRectPolygon = new SAT.Polygon(
+          new SAT.Vector(0, 0),
+          transformedPoints.map((p) => new SAT.Vector(p.x, p.y))
+        );
+
+        // Check collision with prebuilt rectangles
+        let hasCollision = false;
+        for (const rectPoints of prebuildLineRects) {
+          const prebuiltPolygon = new SAT.Polygon(
+            new SAT.Vector(0, 0),
+            rectPoints.reduce((acc, _, i) => {
+              if (i % 2 === 0) acc.push(new SAT.Vector(rectPoints[i], rectPoints[i + 1]));
+              return acc;
+            }, [])
+          );
+
+          if (SAT.testPolygonPolygon(smallRectPolygon, prebuiltPolygon)) {
+            hasCollision = true;
+            break;
+          }
+        }
+
+        if (!hasCollision) {
+          smallRectsAsLines.push(flatPoints);
+        }
       }
     }
 
@@ -153,6 +180,15 @@ const App = () => {
               stroke="red"
               strokeWidth={1}
               closed={true}
+            />
+          ))}
+          {prebuildLineRects.map((points, index) => (
+            <Line
+              key={index}
+              points={points}
+              fill="rgba(255, 0, 0, 0.5)"
+              stroke="black"
+              strokeWidth={0.5}
             />
           ))}
         </Layer>
