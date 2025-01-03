@@ -182,9 +182,6 @@ const App = () => {
               <Rect
                 width={rectDims.width}
                 height={rectDims.height}
-                fill="rgba(0, 128, 255, 0.5)"
-                stroke="black"
-                strokeWidth={1}
               />
             </Group>
           )}
