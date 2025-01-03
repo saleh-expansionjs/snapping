@@ -7,15 +7,29 @@ const App = () => {
   const [angle, setAngle] = useState(45);
   const [isDrawing, setIsDrawing] = useState(false);
   const [startPoint, setStartPoint] = useState(null);
-  const [rectDims, setRectDims] = useState({ width: 0, height: 0 });
+  const [rectDims, setRectDims] = useState({ width: 20, height: 25 });
 
   const angleInRadians = (angle * Math.PI) / 180;
 
   const handleMouseDown = (e) => {
     const position = e.target.getStage().getRelativePointerPosition();
-    setStartPoint(position);
+
+    const rectWidth = rectDims.width;
+    const rectHeight = rectDims.height;
+
+    // Adjust the rectangle's center considering rotation
+    const centerX =
+      position.x - (rectWidth / 2) * Math.cos(angleInRadians) +
+      (rectHeight / 2) * Math.sin(angleInRadians);
+    const centerY =
+      position.y - (rectWidth / 2) * Math.sin(angleInRadians) -
+      (rectHeight / 2) * Math.cos(angleInRadians);
+
+    setStartPoint({ x: centerX, y: centerY });
     setIsDrawing(true);
   };
+
+
 
   const handleMouseUp = () => {
     setIsDrawing(false);
@@ -26,7 +40,7 @@ const App = () => {
     console.log(stageRectangles);
 
     setStartPoint(undefined);
-    setRectDims({ width: 0, height: 0, x: 0, y: 0 });
+    setRectDims({ width: 20, height: 25, x: 0, y: 0 });
   };
 
   const handleMouseMove = (e) => {
