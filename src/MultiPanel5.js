@@ -25,7 +25,7 @@ const App = () => {
       position.y - (rectWidth / 2) * Math.sin(angleInRadians) -
       (rectHeight / 2) * Math.cos(angleInRadians);
 
-    setStartPoint({ x: centerX, y: centerY });
+      setStartPoint({ x: centerX, y: centerY, initialWidth: rectWidth, initialHeight: rectHeight });
     setIsDrawing(true);
   };
 
@@ -54,8 +54,11 @@ const App = () => {
     const dx = position.x - startPoint.x;
     const dy = position.y - startPoint.y;
 
-    const projectedWidth = dx * Math.cos(angleInRadians) + dy * Math.sin(angleInRadians);
-    const projectedHeight = -dx * Math.sin(angleInRadians) + dy * Math.cos(angleInRadians);
+    const baseWidth = startPoint.initialWidth;
+    const baseHeight = startPoint.initialHeight;
+
+    const projectedWidth = baseWidth + dx * Math.cos(angleInRadians) + dy * Math.sin(angleInRadians);
+    const projectedHeight = baseHeight -dx * Math.sin(angleInRadians) + dy * Math.cos(angleInRadians);
 
     const adjustedX = dx < 0 ? startPoint.x + projectedWidth : startPoint.x;
     const adjustedY = dy < 0 ? startPoint.y + projectedHeight : startPoint.y;
