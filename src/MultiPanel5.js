@@ -12,7 +12,7 @@ const App = () => {
   const angleInRadians = (angle * Math.PI) / 180;
 
   const handleMouseDown = (e) => {
-    const position = e.target.getStage().getRelativePointerPosition();
+    const position = e.target.getStage().getPointerPosition();
 
     const rectWidth = rectDims.width;
     const rectHeight = rectDims.height;
@@ -47,27 +47,38 @@ const App = () => {
     if (!isDrawing || !startPoint) return;
 
     const stage = e.target.getStage();
-    const position = stage.getRelativePointerPosition();
+    const position = stage.getPointerPosition();
 
     if (!position || !startPoint) return;
 
     const dx = position.x - startPoint.x;
     const dy = position.y - startPoint.y;
 
+    const rotatedDx = dx * Math.cos(angleInRadians) + dy * Math.sin(angleInRadians);
+    const rotatedDy = -dx * Math.sin(angleInRadians) + dy * Math.cos(angleInRadians);
+
+
     const baseWidth = startPoint.initialWidth;
     const baseHeight = startPoint.initialHeight;
 
-    const projectedWidth = baseWidth + dx * Math.cos(angleInRadians) + dy * Math.sin(angleInRadians);
-    const projectedHeight = baseHeight -dx * Math.sin(angleInRadians) + dy * Math.cos(angleInRadians);
+    let projectedWidth = 0;
+    let projectedHeight = 0;
+    console.log(rotatedDx, rotatedDy);
+    if(rotatedDx < 0) {
+      projectedWidth = -baseWidth + dx * Math.cos(angleInRadians) + dy * Math.sin(angleInRadians);
+    } else {
+      projectedWidth = baseWidth + dx * Math.cos(angleInRadians) + dy * Math.sin(angleInRadians);
+    }
 
-    const adjustedX = dx < 0 ? startPoint.x + projectedWidth : startPoint.x;
-    const adjustedY = dy < 0 ? startPoint.y + projectedHeight : startPoint.y;
+    if(rotatedDy < 0) {
+      projectedHeight = -baseHeight -dx * Math.sin(angleInRadians) + dy * Math.cos(angleInRadians);
+    } else {
+      projectedHeight = baseHeight -dx * Math.sin(angleInRadians) + dy * Math.cos(angleInRadians);
+    }
 
     setRectDims({
       width: projectedWidth,
       height: projectedHeight,
-      x: adjustedX,
-      y: adjustedY,
     });
   };
 
@@ -182,6 +193,7 @@ const App = () => {
               <Rect
                 width={rectDims.width}
                 height={rectDims.height}
+                // stroke={"black"}
               />
             </Group>
           )}
