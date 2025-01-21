@@ -1,5 +1,5 @@
 import React from "react";
-import MultiPanel from "./MultiPanel";
+import MultiPanel from "./MultiPanel5";
 // import MouseDetection from './LineSatV1'
 
 const App = () => {

@@ -4,102 +4,22 @@ import * as SAT from "sat";
 import prebuildLineRects from './smallRect';
 
 const App = () => {
-  const [angle, setAngle] = useState(0);
+  const [angle, setAngle] = useState(45); // Main rectangle angle
+  const [smallRectAngle, setSmallRectAngle] = useState(0); // Small rect angle
   const [isDrawing, setIsDrawing] = useState(false);
   const [startPoint, setStartPoint] = useState(null);
-  const [rectDims, setRectDims] = useState({ width: 20, height: 25 });
-  const [once, setOnce] = useState(false);
+  const [rectDims, setRectDims] = useState({ width: 0, height: 0 });
 
-  let angleInRadians = (angle * Math.PI) / 180;
-
+  const angleInRadians = (angle) => (angle * Math.PI) / 180;
+  
   const handleMouseDown = (e) => {
-    const position = e.target.getStage().getPointerPosition();
-
-    const rectWidth = rectDims.width;
-    const rectHeight = rectDims.height;
-
-    // Adjust the rectangle's center considering rotation
-    const centerX =
-      position.x - (rectWidth / 2) * Math.cos(angleInRadians) +
-      (rectHeight / 2) * Math.sin(angleInRadians);
-    const centerY =
-      position.y - (rectWidth / 2) * Math.sin(angleInRadians) -
-      (rectHeight / 2) * Math.cos(angleInRadians);
-
-    setStartPoint({ x: centerX, y: centerY, initialWidth: rectWidth, initialHeight: rectHeight });
-    setRectDims({
-      width: rectWidth + 5,
-      height: rectHeight + 5,
-    });
+    const position = e.target.getStage().getRelativePointerPosition();
+    setStartPoint(position);
     setIsDrawing(true);
-  };
-
-  const handleMouseMove = (e) => {
-    if (!isDrawing || !startPoint) return;
-
-    const stage = e.target.getStage();
-    const position = stage.getPointerPosition();
-
-    if (!position || !startPoint) return;
-
-    const dx = position.x - startPoint.x;
-    const dy = position.y - startPoint.y;
-
-    const rotatedDx = dx * Math.cos(angleInRadians) + dy * Math.sin(angleInRadians);
-    const rotatedDy = -dx * Math.sin(angleInRadians) + dy * Math.cos(angleInRadians);
-
-
-    const baseWidth = startPoint.initialWidth;
-    const baseHeight = startPoint.initialHeight;
-
-    let projectedWidth = 0;
-    let projectedHeight = 0;
-
-    if (rectDims.width < 26 && rectDims.width > 0) {
-      console.clear();
-      console.log(rectDims.width);
-        setStartPoint({ ...startPoint, x: startPoint.x + (startPoint.initialWidth + 5) });
-        projectedWidth = -baseWidth - startPoint.initialWidth + dx * Math.cos(angleInRadians) + dy * Math.sin(angleInRadians);
-        setRectDims({
-          ...rectDims,
-          width: projectedWidth,
-        });
-        return;
-    }
-
-    if (rectDims.width > -26 && rectDims.width < 0) {
-      console.clear();
-      console.log(rectDims.width);
-      setStartPoint({ ...startPoint, x: startPoint.x - (startPoint.initialWidth + 5) });
-      projectedWidth = +baseWidth + startPoint.initialWidth + dx * Math.cos(angleInRadians) + dy * Math.sin(angleInRadians);
-      setRectDims({
-        ...rectDims,
-        width: projectedWidth,
-      });
-      return;
-  }
-
-    if (rotatedDx < 0) {
-      projectedWidth = -baseWidth + dx * Math.cos(angleInRadians) + dy * Math.sin(angleInRadians);
-    } else {
-      projectedWidth = baseWidth + dx * Math.cos(angleInRadians) + dy * Math.sin(angleInRadians);
-    }
-
-    if (rotatedDy < 0) {
-      projectedHeight = -baseHeight - dx * Math.sin(angleInRadians) + dy * Math.cos(angleInRadians);
-    } else {
-      projectedHeight = baseHeight - dx * Math.sin(angleInRadians) + dy * Math.cos(angleInRadians);
-    }
-
-    setRectDims({
-      width: projectedWidth,
-      height: projectedHeight,
-    });
   };
 
   const handleMouseUp = () => {
     setIsDrawing(false);
-    setOnce(false);
 
     if (!startPoint) return;
 
@@ -107,15 +27,38 @@ const App = () => {
     console.log(stageRectangles);
 
     setStartPoint(undefined);
-    setRectDims({ width: 20, height: 25, x: 0, y: 0 });
+    setRectDims({ width: 0, height: 0, x: 0, y: 0 });
   };
 
+  const handleMouseMove = (e) => {
+    if (!isDrawing || !startPoint) return;
+
+    const stage = e.target.getStage();
+    const position = stage.getRelativePointerPosition();
+
+    if (!position || !startPoint) return;
+
+    const dx = position.x - startPoint.x;
+    const dy = position.y - startPoint.y;
+
+    const projectedWidth = dx * Math.cos(angleInRadians(angle)) + dy * Math.sin(angleInRadians(angle));
+    const projectedHeight = -dx * Math.sin(angleInRadians(angle)) + dy * Math.cos(angleInRadians(angle));
+
+    const adjustedX = dx < 0 ? startPoint.x + projectedWidth : startPoint.x;
+    const adjustedY = dy < 0 ? startPoint.y + projectedHeight : startPoint.y;
+
+    setRectDims({
+      width: projectedWidth,
+      height: projectedHeight,
+      x: adjustedX,
+      y: adjustedY,
+    });
+  };
 
   const generateSmallRectsAsLines = () => {
     const smallWidth = 25;
     const smallHeight = 20;
 
-    // Calculate the number of small rectangles fitting in both directions
     const cols = Math.floor(Math.abs(rectDims?.width) / smallWidth);
     const rows = Math.floor(Math.abs(rectDims?.height) / smallHeight);
 
@@ -140,8 +83,8 @@ const App = () => {
         ];
 
         const transformedPoints = points.map((point) => {
-          const rotatedX = point.x * Math.cos(angleInRadians) - point.y * Math.sin(angleInRadians);
-          const rotatedY = point.x * Math.sin(angleInRadians) + point.y * Math.cos(angleInRadians);
+          const rotatedX = point.x * Math.cos(angleInRadians(smallRectAngle)) - point.y * Math.sin(angleInRadians(smallRectAngle));
+          const rotatedY = point.x * Math.sin(angleInRadians(smallRectAngle)) + point.y * Math.cos(angleInRadians(smallRectAngle));
 
           const stageX = startPoint.x + rotatedX;
           const stageY = startPoint.y + rotatedY;
@@ -149,7 +92,6 @@ const App = () => {
           return { x: stageX, y: stageY };
         });
 
-        // Convert the transformed points to a flat array for Line rendering
         const flatPoints = [
           transformedPoints[0].x,
           transformedPoints[0].y,
@@ -163,13 +105,11 @@ const App = () => {
           transformedPoints[0].y,
         ];
 
-        // Convert flat points to SAT.Polygon
         const smallRectPolygon = new SAT.Polygon(
           new SAT.Vector(0, 0),
           transformedPoints.map((p) => new SAT.Vector(p.x, p.y))
         );
 
-        // Check collision with prebuilt rectangles
         let hasCollision = false;
         for (const rectPoints of prebuildLineRects) {
           const prebuiltPolygon = new SAT.Polygon(
@@ -201,7 +141,14 @@ const App = () => {
         type="number"
         value={angle}
         onChange={(e) => setAngle(Number(e.target.value))}
-        placeholder="Set angle in degrees"
+        placeholder="Set main rect angle"
+        style={{ marginBottom: "10px" }}
+      />
+      <input
+        type="number"
+        value={smallRectAngle}
+        onChange={(e) => setSmallRectAngle(Number(e.target.value))}
+        placeholder="Set small rect angle"
         style={{ marginBottom: "10px" }}
       />
       <Stage
@@ -216,13 +163,15 @@ const App = () => {
             <Group
               x={startPoint.x}
               y={startPoint.y}
-              rotation={angle}
+              rotation={angleInRadians}
             >
               {/* Main Rectangle */}
               <Rect
                 width={rectDims.width}
                 height={rectDims.height}
-                stroke={"black"}
+                fill="rgba(0, 128, 255, 0.5)"
+                stroke="black"
+                strokeWidth={1}
               />
             </Group>
           )}
@@ -233,7 +182,7 @@ const App = () => {
               key={index}
               points={points}
               stroke="red"
-              strokeWidth={1}
+              strokeWidth={0.5}
               closed={true}
             />
           ))}
