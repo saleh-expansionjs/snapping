@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Stage, Layer, Rect, Group } from "react-konva";
+import { Stage, Layer, Rect, Group, Line } from "react-konva";
 
 const App = () => {
   const [angle, setAngle] = useState(45); // Default angle in degrees
@@ -41,7 +41,7 @@ const App = () => {
     });
   };
 
-  
+
 
   // Function to generate small rectangles
   const generateSmallRects = (width, height) => {
@@ -53,12 +53,50 @@ const App = () => {
     const cols = Math.floor(width / smallWidth);
     const rows = Math.floor(height / smallHeight);
 
+    const rowVector = Math.abs(rectDims.width) / rectDims.width;
+    const coVector = Math.abs(rectDims.height) / rectDims.height;
+
+    const rowConstant = rowVector > 0 ? 0 : 1;
+    const colConstant = coVector > 0 ? 0 : 1;
+
+
     for (let row = 0; row < rows; row++) {
       for (let col = 0; col < cols; col++) {
-        smallRects.push({
-          x: col * smallWidth,
-          y: row * smallHeight,
+
+        const localX = (col + rowConstant) * smallWidth * rowVector;
+        const localY = (row + colConstant) * smallHeight * coVector;
+
+        const points = [
+          { x: localX, y: localY },
+          { x: localX + smallWidth, y: localY },
+          { x: localX + smallWidth, y: localY + smallHeight },
+          { x: localX, y: localY + smallHeight },
+        ];
+
+        const transformedPoints = points.map((point) => {
+          const rotatedX = point.x * Math.cos(angleInRadians) - point.y * Math.sin(angleInRadians);
+          const rotatedY = point.x * Math.sin(angleInRadians) + point.y * Math.cos(angleInRadians);
+
+          const stageX = startPoint.x + rotatedX;
+          const stageY = startPoint.y + rotatedY;
+
+          return { x: stageX, y: stageY };
         });
+
+        const flatPoints = [
+          transformedPoints[0].x,
+          transformedPoints[0].y,
+          transformedPoints[1].x,
+          transformedPoints[1].y,
+          transformedPoints[2].x,
+          transformedPoints[2].y,
+          transformedPoints[3].x,
+          transformedPoints[3].y,
+          transformedPoints[0].x,
+          transformedPoints[0].y,
+        ];
+
+        smallRects.push(flatPoints);
       }
     }
 
@@ -100,21 +138,17 @@ const App = () => {
                 stroke="black"
                 strokeWidth={1}
               />
-              {/* Small Rectangles */}
-              {smallRects.map((pos, index) => (
-                <Rect
-                  key={index}
-                  x={pos.x - rectDims.offsetX} // Adjust for offset
-                  y={pos.y - rectDims.offsetY} // Adjust for offset
-                  width={25}
-                  height={20}
-                  fill="rgba(255, 0, 0, 0.5)"
-                  stroke="black"
-                  strokeWidth={0.5}
-                />
-              ))}
             </Group>
           )}
+          {smallRects.map((points, index) => (
+                <Line
+                  key={index}
+                  points={points}
+                  stroke={'rgba(0, 128, 255, 0.5)'}
+                  strokeWidth={1.4}
+                  closed={true}
+                />
+              ))}
         </Layer>
       </Stage>
     </div>
