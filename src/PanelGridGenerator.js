@@ -53,20 +53,39 @@ export default function PanelGridGenerator() {
     return { x, y };
   });
 
+  const getBoundingBox = (points) => {
+    const xs = points.filter((_, i) => i % 2 === 0);
+    const ys = points.filter((_, i) => i % 2 === 1);
+    return {
+      minX: Math.min(...xs),
+      maxX: Math.max(...xs),
+      minY: Math.min(...ys),
+      maxY: Math.max(...ys),
+    };
+  };
+  
+  const facetBBox = getBoundingBox(hullPoints.flat());
   const handleClick = () => {
     const stepX = rotateVector([width, 0], angleRad);
     const stepY = rotateVector([0, height], angleRad);
-
+  
     const newPanels = [];
-    const gridSize = 50;
-
-    for (let i = -gridSize; i <= gridSize; i++) {
-      for (let j = -gridSize; j <= gridSize; j++) {
+  
+    const estimateSteps = (min, max, stepSize, axisVector) => {
+      const axisLen = Math.abs(stepSize[0]) + Math.abs(stepSize[1]);
+      return Math.ceil((max - min) / axisLen) + 2; // +2 buffer
+    };
+  
+    const maxI = estimateSteps(facetBBox.minX, facetBBox.maxX, stepX);
+    const maxJ = estimateSteps(facetBBox.minY, facetBBox.maxY, stepY);
+  
+    for (let i = -maxI; i <= maxI; i++) {
+      for (let j = -maxJ; j <= maxJ; j++) {
         if (i === 0 && j === 0) continue;
-
+  
         const px = center.x + i * stepX[0] + j * stepY[0];
         const py = center.y + i * stepX[1] + j * stepY[1];
-
+  
         const rect = generatePanelAt(px, py, width, height, angleRad);
         const poly = toSATPolygon(rect);
         if (SAT.testPolygonPolygon(poly, facetPolygon)) {
@@ -74,9 +93,10 @@ export default function PanelGridGenerator() {
         }
       }
     }
-
+  
     setPanels(newPanels);
   };
+    
 
   return (
     <Stage width={window.innerWidth} height={window.innerHeight}>
