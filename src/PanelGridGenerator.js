@@ -1,4 +1,4 @@
-import { Stage, Layer, Line } from "react-konva";
+import { Stage, Layer, Line, Group } from "react-konva";
 import { useState } from "react";
 import SAT from "sat";
 import { hullPoints, panelPoints } from './HullPoints';
@@ -20,14 +20,12 @@ const rotateVector = ([x, y], angleRad) => [
 const generatePanelAt = (cx, cy, width, height, angleRad) => {
   const halfW = width / 2;
   const halfH = height / 2;
-
   const corners = [
     [-halfW, -halfH],
     [halfW, -halfH],
     [halfW, halfH],
     [-halfW, halfH],
   ];
-
   return corners.map(([dx, dy]) => {
     const [x, y] = rotateVector([dx, dy], angleRad);
     return [cx + x, cy + y];
@@ -40,28 +38,22 @@ const distance = ([x1, y1], [x2, y2]) =>
 export default function PanelGridGenerator() {
   const rotationAngle = 145.64622497558594;
   const angleRad = degToRad(rotationAngle);
-  const [panels, setPanels] = useState([]);
-  const [panelPos, setPanelPos] = useState({ x: 0, y: 0 });
-
-  // Compute actual corners of yellow panel based on original shape + drag position
-  const rawCorners = [];
-  const flatPanel = panelPoints.flat();
-  for (let i = 0; i < flatPanel.length; i += 2) {
-    rawCorners.push([
-      flatPanel[i] + panelPos.x,
-      flatPanel[i + 1] + panelPos.y
-    ]);
-  }
-
   const facetPolygon = toSATPolygon(hullPoints.flat());
 
+  // Compute width and height of the yellow panel from static shape
+  const raw = panelPoints.flat();
+  const corners = [[raw[0], raw[1]], [raw[2], raw[3]], [raw[4], raw[5]]];
+  const width = distance(corners[0], corners[1]);
+  const height = distance(corners[1], corners[2]);
+
+  const [panels, setPanels] = useState([]);
+  const [center, setCenter] = useState(() => {
+    const x = (raw[0] + raw[2] + raw[4] + raw[6]) / 4;
+    const y = (raw[1] + raw[3] + raw[5] + raw[7]) / 4;
+    return { x, y };
+  });
+
   const handleClick = () => {
-    const cx = rawCorners.reduce((sum, [x]) => sum + x, 0) / 4;
-    const cy = rawCorners.reduce((sum, [, y]) => sum + y, 0) / 4;
-
-    const width = distance(rawCorners[0], rawCorners[1]);
-    const height = distance(rawCorners[1], rawCorners[2]);
-
     const stepX = rotateVector([width, 0], angleRad);
     const stepY = rotateVector([0, height], angleRad);
 
@@ -72,14 +64,12 @@ export default function PanelGridGenerator() {
       for (let j = -gridSize; j <= gridSize; j++) {
         if (i === 0 && j === 0) continue;
 
-        const px = cx + i * stepX[0] + j * stepY[0];
-        const py = cy + i * stepX[1] + j * stepY[1];
+        const px = center.x + i * stepX[0] + j * stepY[0];
+        const py = center.y + i * stepX[1] + j * stepY[1];
 
         const rect = generatePanelAt(px, py, width, height, angleRad);
-        const panelPoly = toSATPolygon(rect);
-        const isInside = SAT.testPolygonPolygon(panelPoly, facetPolygon);
-
-        if (isInside) {
+        const poly = toSATPolygon(rect);
+        if (SAT.testPolygonPolygon(poly, facetPolygon)) {
           newPanels.push(rect);
         }
       }
@@ -91,7 +81,7 @@ export default function PanelGridGenerator() {
   return (
     <Stage width={window.innerWidth} height={window.innerHeight}>
       <Layer>
-        {/* Blue Facet */}
+        {/* Blue facet */}
         <Line
           points={hullPoints.flat()}
           fill="blue"
@@ -100,7 +90,7 @@ export default function PanelGridGenerator() {
           closed
         />
 
-        {/* Green Panels */}
+        {/* Green panels */}
         {panels.map((pts, i) => (
           <Line
             key={i}
@@ -112,21 +102,24 @@ export default function PanelGridGenerator() {
           />
         ))}
 
-        {/* Yellow Draggable Clickable Panel */}
-        <Line
-          points={panelPoints.flat()}
-          fill="yellow"
-          stroke="black"
-          strokeWidth={1}
-          closed
-          x={panelPos.x}
-          y={panelPos.y}
-          onClick={handleClick}
+        {/* Yellow draggable center panel */}
+        <Group
+          x={center.x}
+          y={center.y}
           draggable
           onDragEnd={(e) =>
-            setPanelPos({ x: e.target.x(), y: e.target.y() })
+            setCenter({ x: e.target.x(), y: e.target.y() })
           }
-        />
+        >
+          <Line
+            points={generatePanelAt(0, 0, width, height, angleRad)}
+            fill="yellow"
+            stroke="black"
+            strokeWidth={1}
+            closed
+            onClick={handleClick}
+          />
+        </Group>
       </Layer>
     </Stage>
   );
