@@ -1,5 +1,5 @@
 import React from "react";
-import MultiPanel from "./MultiPanel4";
+import MultiPanel from "./PanelGridGenerator";
 // import MultiPanel from './LineSatV1'
 
 const App = () => {
